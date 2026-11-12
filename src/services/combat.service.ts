@@ -2,9 +2,13 @@ import type { ActionName, Character, Fighter, Game, HistoryEntry, Team, TeamSide
 import { HttpError } from "../utils/httpError.js";
 import { ENEMIES, SYSTEM_NAME } from "../data/enemies.js";
 import { statRange } from "../data/classes.js";
+import * as playersService from "./players.service.js";
+import * as charactersService from "./characters.service.js";
 import {
   HEALS_PER_FIGHTER,
   SPECIAL_COOLDOWN,
+  XP_LOSS,
+  XP_WIN,
   applyDefense,
   attackDamage,
   healAmount,
@@ -107,7 +111,7 @@ export function startGame(game: Game): void {
 
 // ---------- Fin de la partida ----------
 
-// Marca la partida como finalizada y guarda el ganador.
+// Marca la partida como finalizada, guarda el ganador y reparte victorias, derrotas y experiencia.
 export function finishGame(game: Game, winnerSide: TeamSide, message: string): void {
   const winner = getTeam(game, winnerSide);
 
@@ -118,6 +122,27 @@ export function finishGame(game: Game, winnerSide: TeamSide, message: string): v
   game.finishedAt = new Date().toISOString();
 
   addEvent(game, message);
+
+  for (const side of ["creator", "opponent"] as TeamSide[]) {
+    const team = getTeam(game, side);
+    const won = side === winnerSide;
+
+    // El sistema no tiene estadísticas ni personajes guardados.
+    if (team.playerId === null) {
+      continue;
+    }
+
+    playersService.recordResult(team.playerId, won);
+
+    for (const fighter of team.fighters) {
+      const levels = charactersService.addExperience(fighter.characterId as number, won ? XP_WIN : XP_LOSS);
+      const character = charactersService.findById(fighter.characterId as number);
+
+      if (levels > 0 && character) {
+        addEvent(game, `${character.name} subió al nivel ${character.level}.`);
+      }
+    }
+  }
 }
 
 // ---------- Acciones ----------

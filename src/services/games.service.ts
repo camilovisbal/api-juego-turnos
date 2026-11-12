@@ -184,6 +184,19 @@ export function surrender(game: Game, player: Player): Game {
   return game;
 }
 
+// Victorias y derrotas separadas contra jugadores y contra el sistema, contadas desde las partidas finalizadas.
+export function statisticsFor(playerId: number) {
+  const finished = getAll({ status: "Finalizada", playerId });
+  const count = (mode: GameMode, won: boolean) =>
+    finished.filter((game) => game.mode === mode && (game.winnerPlayerId === playerId) === won).length;
+
+  return {
+    vsPlayers: { wins: count("jugador", true), losses: count("jugador", false) },
+    vsSystem: { wins: count("sistema", true), losses: count("sistema", false) },
+    gamesInProgress: getAll({ status: "En curso", playerId }).length,
+  };
+}
+
 // Lo que se responde de una partida: los equipos con su personaje activo y de quién es el turno.
 // El historial completo se consulta aparte en /history.
 export function toView(game: Game) {

@@ -60,3 +60,11 @@ export function update(id: number, changes: { name?: string; email?: string; pas
 
   return player;
 }
+
+// Suma una victoria o una derrota al terminar una partida.
+export function recordResult(id: number, won: boolean): void {
+  const player = findById(id);
+
+  if (player && won) player.wins += 1;
+  if (player && !won) player.losses += 1;
+}

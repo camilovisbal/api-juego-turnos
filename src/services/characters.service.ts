@@ -1,4 +1,6 @@
 import type { Character, CharacterClass, Stats } from "../types.js";
+import { CLASS_INFO, MAX_LEVEL, STAT_NAMES } from "../data/classes.js";
+import { XP_PER_LEVEL } from "../utils/formulas.js";
 
 // Los personajes viven en la memoria del servidor, igual que los jugadores.
 let characters: Character[] = [];
@@ -53,4 +55,29 @@ export function remove(id: number): Character | undefined {
   }
 
   return character;
+}
+
+// Suma experiencia. Por cada 100 puntos sube un nivel y cada estadística sube lo que indica su clase.
+// Devuelve cuántos niveles subió.
+export function addExperience(id: number, amount: number): number {
+  const character = findById(id);
+
+  if (!character) {
+    return 0;
+  }
+
+  character.experience += amount;
+  let levels = 0;
+
+  while (character.experience >= XP_PER_LEVEL && character.level < MAX_LEVEL) {
+    character.experience -= XP_PER_LEVEL;
+    character.level += 1;
+    levels += 1;
+
+    for (const stat of STAT_NAMES) {
+      character[stat] += CLASS_INFO[character.class].stats[stat].growth;
+    }
+  }
+
+  return levels;
 }

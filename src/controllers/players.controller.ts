@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 import * as playersService from "../services/players.service.js";
+import * as gamesService from "../services/games.service.js";
+import * as charactersService from "../services/characters.service.js";
 import { currentPlayer } from "../middlewares/auth.js";
 import { parseId } from "../utils/parseId.js";
 import { validateProfile } from "../utils/validatePlayer.js";
@@ -78,4 +80,33 @@ export function updatePlayer(req: Request<{ id: string }, {}, UpdateProfileBody>
 
   const updated = playersService.update(player.id, changes);
   res.json(playersService.toPublic(updated));
+}
+
+// GET /api/players/:id/statistics y GET /api/players/me/statistics
+export function getStatistics(req: Request<{ id: string }>, res: Response) {
+  const player = findPlayer(req.params.id, res);
+
+  if (!player) {
+    return;
+  }
+
+  const gamesPlayed = player.wins + player.losses;
+  const characters = charactersService.getAll({ ownerId: player.id });
+
+  res.json({
+    playerId: player.id,
+    name: player.name,
+    gamesPlayed,
+    wins: player.wins,
+    losses: player.losses,
+    winRate: gamesPlayed === 0 ? 0 : Math.round((player.wins / gamesPlayed) * 100),
+    ...gamesService.statisticsFor(player.id),
+    characters: characters.map(({ id, name, class: characterClass, level, experience }) => ({
+      id,
+      name,
+      class: characterClass,
+      level,
+      experience,
+    })),
+  });
 }

@@ -10,6 +10,11 @@ export const HEALS_PER_FIGHTER = 2;
 // Porcentaje de la vida máxima que recupera una curación.
 export const HEAL_PERCENT = 30;
 
+// Experiencia al terminar una partida. Cada 100 puntos el personaje sube un nivel.
+export const XP_WIN = 50;
+export const XP_LOSS = 20;
+export const XP_PER_LEVEL = 100;
+
 // Daño de un ataque normal: el ataque menos la mitad de la defensa del rival. Mínimo 1.
 export function attackDamage(attack: number, defense: number): number {
   return Math.max(1, attack - Math.floor(defense / 2));
