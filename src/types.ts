@@ -70,3 +70,89 @@ export interface CharacterBody {
   defense?: unknown;
   speed?: unknown;
 }
+
+// ---------- Partidas ----------
+
+export type GameStatus = "Pendiente" | "En curso" | "Finalizada" | "Cancelada";
+
+// "jugador": contra otro jugador. "sistema": contra enemigos que controla el servidor.
+export type GameMode = "jugador" | "sistema";
+
+export type ActionName = "atacar" | "defender" | "habilidad" | "curar";
+
+// creator es el equipo de quien creó la partida y opponent el del rival.
+export type TeamSide = "creator" | "opponent";
+
+// Copia de un personaje dentro de una partida. Se copia para que la vida que pierde en el combate
+// no cambie al personaje original, y para que editarlo después no cambie partidas viejas.
+export interface Fighter {
+  characterId: number | null; // null en los enemigos del sistema
+  name: string;
+  class: CharacterClass;
+  level: number;
+  maxHealth: number;
+  health: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  defending: boolean;
+  specialCooldown: number; // turnos propios que faltan para volver a usar la habilidad
+  healsLeft: number;
+  defeated: boolean;
+}
+
+export interface Team {
+  playerId: number | null; // null cuando es el sistema
+  playerName: string;
+  fighters: Fighter[];
+}
+
+export interface HistoryEntry {
+  turn: number;
+  type: "accion" | "evento";
+  player?: string;
+  actor?: string;
+  action?: ActionName;
+  target?: string;
+  damage?: number;
+  healing?: number;
+  targetHealth?: number;
+  actorHealth?: number;
+  message: string;
+  createdAt: string;
+}
+
+export interface Game {
+  id: number;
+  mode: GameMode;
+  status: GameStatus;
+  createdBy: number;
+  invitedPlayerId: number | null;
+  creator: Team;
+  opponent: Team | null; // null mientras nadie se une
+  turn: number;
+  turnOf: TeamSide | null;
+  winnerPlayerId: number | null;
+  winnerName: string | null;
+  history: HistoryEntry[];
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+// Body de POST /api/games.
+export interface NewGameBody {
+  characterIds?: unknown;
+  mode?: unknown;
+  invitedPlayerId?: unknown;
+}
+
+// Body de POST /api/games/:id/join.
+export interface JoinGameBody {
+  characterIds?: unknown;
+}
+
+// Body de POST /api/games/:id/actions.
+export interface ActionBody {
+  action?: unknown;
+}
