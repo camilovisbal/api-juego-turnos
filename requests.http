@@ -1,0 +1,523 @@
+# Pruebas del API con la extensión REST Client de VS Code.
+# Primero ejecutar el servidor con npm run dev y después hacer clic en "Send Request" en orden, de arriba hacia abajo.
+# Los tokens y los ids se guardan solos en las variables de abajo cuando se ejecuta el login o la creación.
+
+@baseUrl = http://localhost:3000
+@tokenCamilo = {{loginCamilo.response.body.$.token}}
+@tokenAndrea = {{loginAndrea.response.body.$.token}}
+@tokenSofia = {{loginSofia.response.body.$.token}}
+@characterId = {{crearPersonaje.response.body.$.id}}
+@gameId = {{crearPartida.response.body.$.id}}
+@gameSistemaId = {{crearPartidaSistema.response.body.$.id}}
+@gameCancelarId = {{crearPartidaCancelar.response.body.$.id}}
+@gameRendirseId = {{crearPartidaRendirse.response.body.$.id}}
+
+# ===================== 0. Antes de empezar =====================
+
+### Ver que el servidor está funcionando
+GET {{baseUrl}}/
+
+### Reiniciar los datos de prueba (jugadores camilo, andrea y luis con 2 personajes cada uno)
+POST {{baseUrl}}/api/demo/reset
+
+# ===================== 1. Jugadores =====================
+
+### Registrar un jugador nuevo
+POST {{baseUrl}}/api/register
+Content-Type: application/json
+
+{
+  "username": "sofia",
+  "name": "Sofía",
+  "email": "sofia@juego.com",
+  "password": "sofia123"
+}
+
+### Registro con datos inválidos (400)
+POST {{baseUrl}}/api/register
+Content-Type: application/json
+
+{
+  "username": "s",
+  "email": "correo-malo",
+  "password": "123"
+}
+
+### Registro con un usuario que ya existe (409)
+POST {{baseUrl}}/api/register
+Content-Type: application/json
+
+{
+  "username": "sofia",
+  "email": "otra@juego.com",
+  "password": "sofia123"
+}
+
+### Login con contraseña incorrecta (401)
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "username": "sofia",
+  "password": "equivocada"
+}
+
+### Login de sofia
+# @name loginSofia
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "username": "sofia",
+  "password": "sofia123"
+}
+
+### Login de camilo (jugador de prueba)
+# @name loginCamilo
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "username": "camilo",
+  "password": "camilo123"
+}
+
+### Login de andrea (jugadora de prueba)
+# @name loginAndrea
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "username": "andrea",
+  "password": "andrea123"
+}
+
+### Listar jugadores sin token (401)
+GET {{baseUrl}}/api/players
+
+### Listar jugadores
+GET {{baseUrl}}/api/players
+Authorization: Bearer {{tokenCamilo}}
+
+### Consultar mi información
+GET {{baseUrl}}/api/players/me
+Authorization: Bearer {{tokenSofia}}
+
+### Consultar un jugador por id
+GET {{baseUrl}}/api/players/2
+Authorization: Bearer {{tokenCamilo}}
+
+### Actualizar mi perfil
+PUT {{baseUrl}}/api/players/me
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "name": "Sofía Ramírez",
+  "email": "sofia.ramirez@juego.com"
+}
+
+### Editar el perfil de otro jugador (403)
+PUT {{baseUrl}}/api/players/1
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "name": "Hackeado"
+}
+
+# ===================== 2. Personajes =====================
+
+### Ver las clases con sus estadísticas y límites
+GET {{baseUrl}}/api/classes
+Authorization: Bearer {{tokenSofia}}
+
+### Consultar todos los personajes
+GET {{baseUrl}}/api/characters
+Authorization: Bearer {{tokenSofia}}
+
+### Consultar los personajes de un jugador
+GET {{baseUrl}}/api/characters?playerId=1
+Authorization: Bearer {{tokenSofia}}
+
+### Consultar un personaje
+GET {{baseUrl}}/api/characters/1
+Authorization: Bearer {{tokenSofia}}
+
+### Crear un personaje
+# @name crearPersonaje
+POST {{baseUrl}}/api/characters
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "name": "Kael",
+  "class": "arquero"
+}
+
+### Crear un personaje con estadísticas fuera de los límites (400)
+POST {{baseUrl}}/api/characters
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "name": "Tramposo",
+  "class": "mago",
+  "attack": 9999,
+  "level": 10
+}
+
+### Actualizar mi personaje (más ataque, menos defensa)
+PUT {{baseUrl}}/api/characters/{{characterId}}
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "attack": 20,
+  "defense": 4
+}
+
+### Editar un personaje ajeno (403)
+PUT {{baseUrl}}/api/characters/1
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "name": "Robado"
+}
+
+### Eliminar un personaje ajeno (403)
+DELETE {{baseUrl}}/api/characters/1
+Authorization: Bearer {{tokenSofia}}
+
+# ===================== 3. Partida entre jugadores (camilo con Thorin contra andrea con Merlín) =====================
+
+### camilo crea la partida con Thorin e invita a andrea (id 2)
+# @name crearPartida
+POST {{baseUrl}}/api/games
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "characterIds": [1],
+  "mode": "jugador",
+  "invitedPlayerId": 2
+}
+
+### Crear una partida con un personaje ajeno (403)
+POST {{baseUrl}}/api/games
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "characterIds": [3]
+}
+
+### No se puede eliminar un personaje que está en una partida (409)
+DELETE {{baseUrl}}/api/characters/1
+Authorization: Bearer {{tokenCamilo}}
+
+### andrea consulta las partidas a las que se puede unir
+GET {{baseUrl}}/api/games?available=true
+Authorization: Bearer {{tokenAndrea}}
+
+### sofia intenta unirse a una invitación que no es para ella (403)
+POST {{baseUrl}}/api/games/{{gameId}}/join
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "characterIds": [{{characterId}}]
+}
+
+### andrea se une con Merlín. Empieza ella porque Merlín es más rápido (10 contra 8)
+POST {{baseUrl}}/api/games/{{gameId}}/join
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "characterIds": [3]
+}
+
+### Consultar el estado de la partida
+GET {{baseUrl}}/api/games/{{gameId}}
+Authorization: Bearer {{tokenCamilo}}
+
+### camilo intenta jugar pero no es su turno (409)
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### andrea intenta curarse con la vida llena (409)
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "curar"
+}
+
+### Turno 1 - andrea: Merlín ataca
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Turno 2 - camilo: Thorin usa su habilidad (Golpe demoledor)
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "habilidad"
+}
+
+### Turno 3 - andrea: Merlín ataca
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### camilo intenta repetir la habilidad, que está en enfriamiento (409)
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "habilidad"
+}
+
+### Turno 4 - camilo: Thorin se defiende
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "defender"
+}
+
+### Turno 5 - andrea: Merlín ataca y Thorin recibe la mitad
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Turno 6 - camilo: Thorin ataca
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Turno 7 - andrea: Merlín ataca
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Turno 8 - camilo: Thorin se cura
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "curar"
+}
+
+### Turno 9 - andrea: Merlín ataca
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Turno 10 - camilo: Thorin usa su habilidad otra vez
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "habilidad"
+}
+
+### Turno 11 - andrea: Merlín ataca
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Turno 12 - camilo: Thorin ataca y gana la partida
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Acción en una partida finalizada (409)
+POST {{baseUrl}}/api/games/{{gameId}}/actions
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### Consultar el historial de la partida
+GET {{baseUrl}}/api/games/{{gameId}}/history
+Authorization: Bearer {{tokenCamilo}}
+
+### Estadísticas de camilo
+GET {{baseUrl}}/api/players/1/statistics
+Authorization: Bearer {{tokenCamilo}}
+
+### Estadísticas de andrea
+GET {{baseUrl}}/api/players/2/statistics
+Authorization: Bearer {{tokenCamilo}}
+
+# ===================== 4. Partida contra el sistema (sofia con Kael) =====================
+
+### sofia crea una partida contra el sistema. Empieza de una vez
+# @name crearPartidaSistema
+POST {{baseUrl}}/api/games
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "characterIds": [{{characterId}}],
+  "mode": "sistema"
+}
+
+### sofia usa la habilidad (Doble disparo). El sistema responde en la misma petición: le queda poca vida y se cura
+POST {{baseUrl}}/api/games/{{gameSistemaId}}/actions
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "action": "habilidad"
+}
+
+### sofia ataca y el sistema se vuelve a curar
+POST {{baseUrl}}/api/games/{{gameSistemaId}}/actions
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### sofia ataca. El sistema ya no tiene curaciones y usa su habilidad
+POST {{baseUrl}}/api/games/{{gameSistemaId}}/actions
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "action": "atacar"
+}
+
+### sofia usa otra vez la habilidad y gana
+POST {{baseUrl}}/api/games/{{gameSistemaId}}/actions
+Authorization: Bearer {{tokenSofia}}
+Content-Type: application/json
+
+{
+  "action": "habilidad"
+}
+
+### Historial de la partida contra el sistema
+GET {{baseUrl}}/api/games/{{gameSistemaId}}/history
+Authorization: Bearer {{tokenSofia}}
+
+### Estadísticas de sofia
+GET {{baseUrl}}/api/players/me/statistics
+Authorization: Bearer {{tokenSofia}}
+
+# ===================== 5. Cancelar y finalizar partidas =====================
+
+### camilo crea una partida abierta con Lyra
+# @name crearPartidaCancelar
+POST {{baseUrl}}/api/games
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "characterIds": [2]
+}
+
+### Listar las partidas pendientes
+GET {{baseUrl}}/api/games?status=Pendiente
+Authorization: Bearer {{tokenAndrea}}
+
+### andrea intenta cancelar una partida que no creó (403)
+POST {{baseUrl}}/api/games/{{gameCancelarId}}/cancel
+Authorization: Bearer {{tokenAndrea}}
+
+### camilo cancela la partida
+POST {{baseUrl}}/api/games/{{gameCancelarId}}/cancel
+Authorization: Bearer {{tokenCamilo}}
+
+### Unirse a una partida cancelada (409)
+POST {{baseUrl}}/api/games/{{gameCancelarId}}/join
+Authorization: Bearer {{tokenAndrea}}
+Content-Type: application/json
+
+{
+  "characterIds": [4]
+}
+
+### camilo crea una partida contra el sistema con Lyra
+# @name crearPartidaRendirse
+POST {{baseUrl}}/api/games
+Authorization: Bearer {{tokenCamilo}}
+Content-Type: application/json
+
+{
+  "characterIds": [2],
+  "mode": "sistema"
+}
+
+### camilo finaliza la partida rindiéndose: gana el sistema
+POST {{baseUrl}}/api/games/{{gameRendirseId}}/finish
+Authorization: Bearer {{tokenCamilo}}
+
+### Listar todas las partidas
+GET {{baseUrl}}/api/games
+Authorization: Bearer {{tokenCamilo}}
+
+# ===================== 6. Para terminar =====================
+
+### Eliminar mi personaje
+DELETE {{baseUrl}}/api/characters/{{characterId}}
+Authorization: Bearer {{tokenSofia}}
+
+### Cerrar sesión
+POST {{baseUrl}}/api/logout
+Authorization: Bearer {{tokenSofia}}
+
+### El token ya no sirve (401)
+GET {{baseUrl}}/api/players/me
+Authorization: Bearer {{tokenSofia}}
