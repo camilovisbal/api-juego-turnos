@@ -134,3 +134,24 @@ export function getHistory(req: Request<{ id: string }>, res: Response) {
     res.json({ gameId: game.id, status: game.status, winnerName: game.winnerName, history: game.history });
   }
 }
+
+// POST /api/games/:id/finish
+// El jugador que la finaliza se rinde y la victoria es para el rival.
+export function finishGame(req: Request<{ id: string }>, res: Response) {
+  const game = findGame(req.params.id, res);
+
+  if (game) {
+    gamesService.surrender(game, currentPlayer(res));
+    res.json(gamesService.toView(game));
+  }
+}
+
+// POST /api/games/:id/cancel
+export function cancelGame(req: Request<{ id: string }>, res: Response) {
+  const game = findGame(req.params.id, res);
+
+  if (game) {
+    gamesService.cancel(game, currentPlayer(res));
+    res.json(gamesService.toView(game));
+  }
+}

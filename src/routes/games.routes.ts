@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { createGame, getGame, getGames, getHistory, joinGame, playAction } from "../controllers/games.controller.js";
+import {
+  cancelGame,
+  createGame,
+  finishGame,
+  getGame,
+  getGames,
+  getHistory,
+  joinGame,
+  playAction,
+} from "../controllers/games.controller.js";
 
 const router = Router();
 
@@ -9,5 +18,7 @@ router.post("/", createGame);
 router.post("/:id/join", joinGame);
 router.post("/:id/actions", playAction);
 router.get("/:id/history", getHistory);
+router.post("/:id/finish", finishGame);
+router.post("/:id/cancel", cancelGame);
 
 export default router;

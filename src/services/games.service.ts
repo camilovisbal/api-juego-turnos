@@ -1,6 +1,15 @@
-import type { Character, Game, GameMode, GameStatus, Player, Team } from "../types.js";
+import type { Character, Game, GameMode, GameStatus, Player, Team, TeamSide } from "../types.js";
 import * as charactersService from "./characters.service.js";
-import { activeFighter, addEvent, createSystemTeam, getTeam, startGame, toFighter } from "./combat.service.js";
+import {
+  activeFighter,
+  addEvent,
+  createSystemTeam,
+  finishGame,
+  getTeam,
+  otherSide,
+  startGame,
+  toFighter,
+} from "./combat.service.js";
 import { HttpError } from "../utils/httpError.js";
 
 // Las partidas viven en la memoria del servidor.
@@ -136,6 +145,41 @@ export function join(game: Game, player: Player, characters: Character[]): Game 
   game.opponent = { playerId: player.id, playerName: player.name, fighters: characters.map(toFighter) };
   addEvent(game, `${player.name} se unió con ${namesOf(game.opponent)}.`);
   startGame(game);
+
+  return game;
+}
+
+// POST /api/games/:id/cancel. Solo el creador y solo mientras nadie se haya unido.
+export function cancel(game: Game, player: Player): Game {
+  if (game.createdBy !== player.id) {
+    throw new HttpError(403, "Solo quien creó la partida puede cancelarla.");
+  }
+
+  if (game.status !== "Pendiente") {
+    throw new HttpError(409, `Solo se puede cancelar una partida Pendiente. Esta partida está ${game.status}.`);
+  }
+
+  game.status = "Cancelada";
+  game.finishedAt = new Date().toISOString();
+  addEvent(game, `${player.name} canceló la partida.`);
+
+  return game;
+}
+
+// POST /api/games/:id/finish. El jugador que la finaliza se rinde y gana el rival.
+export function surrender(game: Game, player: Player): Game {
+  if (!isParticipant(game, player.id)) {
+    throw new HttpError(403, "No participas en esta partida.");
+  }
+
+  if (game.status !== "En curso") {
+    const hint = game.status === "Pendiente" ? " Si nadie se ha unido, usa /cancel." : "";
+    throw new HttpError(409, `Solo se puede finalizar una partida En curso. Esta partida está ${game.status}.${hint}`);
+  }
+
+  const loserSide: TeamSide = game.creator.playerId === player.id ? "creator" : "opponent";
+  const winner = getTeam(game, otherSide(loserSide));
+  finishGame(game, otherSide(loserSide), `${player.name} se rindió. ${winner.playerName} ganó la partida.`);
 
   return game;
 }

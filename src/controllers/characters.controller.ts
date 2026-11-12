@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as charactersService from "../services/characters.service.js";
 import * as playersService from "../services/players.service.js";
+import * as gamesService from "../services/games.service.js";
 import { currentPlayer } from "../middlewares/auth.js";
 import { parseId } from "../utils/parseId.js";
 import { validateCharacterChanges, validateNewCharacter } from "../utils/validateCharacter.js";
@@ -10,6 +11,17 @@ import type { Character, CharacterBody, CharacterClass } from "../types.js";
 const MAX_CHARACTERS = 6;
 
 // Busca el personaje del :id. Si no existe responde 404 y devuelve undefined.
+// 409 si el personaje está en una partida pendiente o en curso.
+function isPlaying(character: Character, verb: string, res: Response): boolean {
+  const game = gamesService.findActiveGameWithCharacter(character.id);
+
+  if (game) {
+    res.status(409).json({ error: `No puedes ${verb} a ${character.name} mientras está en la partida ${game.id} (${game.status}).` });
+  }
+
+  return game !== undefined;
+}
+
 function findCharacter(idParam: string, res: Response): Character | undefined {
   const id = parseId(idParam, "del personaje");
   const character = charactersService.findById(id);
@@ -105,6 +117,10 @@ export function updateCharacter(req: Request<{ id: string }, {}, CharacterBody>,
     return;
   }
 
+  if (isPlaying(character, "editar", res)) {
+    return;
+  }
+
   const result = validateCharacterChanges(req.body ?? {}, character);
 
   if (!result.isValid) {
@@ -131,6 +147,10 @@ export function deleteCharacter(req: Request<{ id: string }>, res: Response) {
 
   if (character.ownerId !== currentPlayer(res).id) {
     res.status(403).json({ error: "Solo puedes eliminar tus propios personajes." });
+    return;
+  }
+
+  if (isPlaying(character, "eliminar", res)) {
     return;
   }
 
