@@ -30,4 +30,12 @@ export interface LoginBody {
   password?: unknown;
 }
 
+// Lo que llega en el body de PUT /api/players/:id. Todo es opcional.
+export interface UpdateProfileBody {
+  name?: unknown;
+  email?: unknown;
+  password?: unknown;
+  currentPassword?: unknown;
+}
+
 export type FieldErrors = Record<string, string>;

@@ -54,3 +54,10 @@ export function login(req: Request<{}, {}, LoginBody>, res: Response) {
   const { token, expiresAt } = authService.createToken(player.id);
   res.json({ mensaje: `Bienvenido, ${player.name}.`, token, expiresAt, player: playersService.toPublic(player) });
 }
+
+// POST /api/logout
+// Borra el token de la memoria, así ya no sirve aunque alguien lo tenga copiado.
+export function logout(req: Request, res: Response) {
+  authService.removeToken(res.locals.token as string);
+  res.status(204).end();
+}

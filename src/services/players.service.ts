@@ -45,3 +45,18 @@ export function create(data: { username: string; name?: string; email: string; p
   players = [...players, player];
   return player;
 }
+
+export function update(id: number, changes: { name?: string; email?: string; password?: string }): Player {
+  const player = findById(id) as Player;
+
+  if (changes.name) player.name = changes.name;
+  if (changes.email) player.email = changes.email;
+
+  if (changes.password) {
+    const { salt, hash } = hashPassword(changes.password);
+    player.salt = salt;
+    player.passwordHash = hash;
+  }
+
+  return player;
+}

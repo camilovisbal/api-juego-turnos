@@ -1,6 +1,8 @@
 import express, { type Request, type Response } from "express";
 import authRoutes from "./routes/auth.routes.js";
+import playersRoutes from "./routes/players.routes.js";
 import { logger } from "./middlewares/logger.js";
+import { requireAuth } from "./middlewares/auth.js";
 import { errorHandler, notFound } from "./middlewares/errors.js";
 
 const app = express();
@@ -17,6 +19,9 @@ app.get("/", (req: Request, res: Response) => {
 
 // Registro e inicio de sesión: son las únicas rutas que no piden token.
 app.use("/api", authRoutes);
+
+// Desde aquí todas las rutas pasan primero por requireAuth.
+app.use("/api/players", requireAuth, playersRoutes);
 
 // 3. Errores al final.
 app.use(notFound);

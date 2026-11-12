@@ -1,4 +1,4 @@
-import type { FieldErrors, RegisterBody } from "../types.js";
+import type { FieldErrors, RegisterBody, UpdateProfileBody } from "../types.js";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,5 +54,46 @@ export function validateRegister(body: RegisterBody) {
     name: typeof name === "string" ? name.trim() : undefined,
     email: typeof email === "string" ? email.trim().toLowerCase() : "",
     password: password as string,
+  };
+}
+
+// Revisa el body de la edición del perfil. Solo se cambia lo que venga en el body.
+// El usuario (username) no se puede cambiar porque es con lo que se inicia sesión.
+export function validateProfile(body: UpdateProfileBody) {
+  const errors: FieldErrors = {};
+  const changes: { name?: string; email?: string; password?: string } = {};
+  const { name, email, password, currentPassword } = body;
+
+  if (name === undefined && email === undefined && password === undefined) {
+    errors.general = "Envía al menos un dato para cambiar: name, email o password.";
+  }
+
+  if (name !== undefined) {
+    const nameError = checkName(name);
+    if (nameError) errors.name = nameError;
+    else changes.name = (name as string).trim();
+  }
+
+  if (email !== undefined) {
+    const emailError = checkEmail(email);
+    if (emailError) errors.email = emailError;
+    else changes.email = (email as string).trim().toLowerCase();
+  }
+
+  if (password !== undefined) {
+    const passwordError = checkPassword(password);
+    if (passwordError) errors.password = passwordError;
+    else changes.password = password as string;
+
+    if (typeof currentPassword !== "string" || currentPassword === "") {
+      errors.currentPassword = "Para cambiar la contraseña envía también la actual en currentPassword.";
+    }
+  }
+
+  return {
+    errors,
+    isValid: Object.keys(errors).length === 0,
+    changes,
+    currentPassword: typeof currentPassword === "string" ? currentPassword : "",
   };
 }
