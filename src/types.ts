@@ -39,3 +39,34 @@ export interface UpdateProfileBody {
 }
 
 export type FieldErrors = Record<string, string>;
+
+// ---------- Personajes ----------
+
+export type CharacterClass = "guerrero" | "mago" | "arquero";
+
+export type StatName = "health" | "attack" | "defense" | "speed";
+
+// health es la vida máxima del personaje.
+export type Stats = Record<StatName, number>;
+
+export interface Character extends Stats {
+  id: number;
+  ownerId: number;
+  name: string;
+  class: CharacterClass;
+  level: number;
+  experience: number;
+  createdAt: string;
+}
+
+// Lo que llega en el body de POST /api/characters y PUT /api/characters/:id.
+export interface CharacterBody {
+  name?: unknown;
+  class?: unknown;
+  level?: unknown;
+  experience?: unknown;
+  health?: unknown;
+  attack?: unknown;
+  defense?: unknown;
+  speed?: unknown;
+}
