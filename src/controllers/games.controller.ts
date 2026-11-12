@@ -1,10 +1,11 @@
 import type { Request, Response } from "express";
 import * as gamesService from "../services/games.service.js";
 import * as playersService from "../services/players.service.js";
+import * as combatService from "../services/combat.service.js";
 import { currentPlayer } from "../middlewares/auth.js";
 import { parseId } from "../utils/parseId.js";
-import { validateJoinGame, validateNewGame } from "../utils/validateGame.js";
-import type { Game, GameStatus, JoinGameBody, NewGameBody } from "../types.js";
+import { checkAction, validateJoinGame, validateNewGame } from "../utils/validateGame.js";
+import type { ActionBody, ActionName, Game, GameStatus, JoinGameBody, NewGameBody } from "../types.js";
 
 const STATUSES: GameStatus[] = ["Pendiente", "En curso", "Finalizada", "Cancelada"];
 
@@ -101,4 +102,35 @@ export function joinGame(req: Request<{ id: string }, {}, JoinGameBody>, res: Re
   gamesService.join(game, player, characters);
 
   res.json(gamesService.toView(game));
+}
+
+// POST /api/games/:id/actions
+// Body: { "action": "atacar" }  (atacar, defender, habilidad o curar)
+export function playAction(req: Request<{ id: string }, {}, ActionBody>, res: Response) {
+  const game = findGame(req.params.id, res);
+
+  if (!game) {
+    return;
+  }
+
+  const actionError = checkAction(req.body?.action);
+
+  if (actionError) {
+    res.status(400).json({ error: actionError });
+    return;
+  }
+
+  // 403 si no juega en la partida, 409 si no es su turno o si la acción rompe una regla.
+  const events = combatService.playTurn(game, currentPlayer(res).id, req.body.action as ActionName);
+
+  res.json({ events, game: gamesService.toView(game) });
+}
+
+// GET /api/games/:id/history
+export function getHistory(req: Request<{ id: string }>, res: Response) {
+  const game = findGame(req.params.id, res);
+
+  if (game) {
+    res.json({ gameId: game.id, status: game.status, winnerName: game.winnerName, history: game.history });
+  }
 }

@@ -1,4 +1,4 @@
-import type { FieldErrors, GameMode, JoinGameBody, NewGameBody } from "../types.js";
+import type { ActionName, FieldErrors, GameMode, JoinGameBody, NewGameBody } from "../types.js";
 
 export const MAX_TEAM_SIZE = 3;
 
@@ -57,4 +57,13 @@ export function validateJoinGame(body: JoinGameBody) {
   if (idsError) errors.characterIds = idsError;
 
   return { errors, isValid: Object.keys(errors).length === 0, characterIds: body.characterIds as number[] };
+}
+
+export const ACTIONS: ActionName[] = ["atacar", "defender", "habilidad", "curar"];
+
+// POST /api/games/:id/actions
+export function checkAction(value: unknown): string | undefined {
+  if (!ACTIONS.includes(value as ActionName)) {
+    return `La acción debe ser una de estas: ${ACTIONS.join(", ")}.`;
+  }
 }
