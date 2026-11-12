@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from "express";
+import authRoutes from "./routes/auth.routes.js";
 import { logger } from "./middlewares/logger.js";
 import { errorHandler, notFound } from "./middlewares/errors.js";
 
@@ -13,6 +14,9 @@ app.use(express.json());
 app.get("/", (req: Request, res: Response) => {
   res.json({ mensaje: "API del juego por turnos funcionando" });
 });
+
+// Registro e inicio de sesión: son las únicas rutas que no piden token.
+app.use("/api", authRoutes);
 
 // 3. Errores al final.
 app.use(notFound);
