@@ -48,6 +48,11 @@ export function isParticipant(game: Game, playerId: number): boolean {
   return game.creator.playerId === playerId || game.opponent?.playerId === playerId;
 }
 
+export function removeAll(): void {
+  games = [];
+  nextId = 1;
+}
+
 // Una partida pendiente o en curso donde está el personaje. Un personaje no puede estar en dos a la vez.
 export function findActiveGameWithCharacter(characterId: number): Game | undefined {
   return games.find(

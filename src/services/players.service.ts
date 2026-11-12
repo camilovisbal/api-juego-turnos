@@ -68,3 +68,8 @@ export function recordResult(id: number, won: boolean): void {
   if (player && won) player.wins += 1;
   if (player && !won) player.losses += 1;
 }
+
+export function removeAll(): void {
+  players = [];
+  nextId = 1;
+}

@@ -81,3 +81,8 @@ export function addExperience(id: number, amount: number): number {
 
   return levels;
 }
+
+export function removeAll(): void {
+  characters = [];
+  nextId = 1;
+}
