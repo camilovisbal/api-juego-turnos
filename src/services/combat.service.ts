@@ -1,5 +1,7 @@
 import type { ActionName, Character, Fighter, Game, HistoryEntry, Team, TeamSide } from "../types.js";
 import { HttpError } from "../utils/httpError.js";
+import { ENEMIES, SYSTEM_NAME } from "../data/enemies.js";
+import { statRange } from "../data/classes.js";
 import {
   HEALS_PER_FIGHTER,
   SPECIAL_COOLDOWN,
@@ -28,6 +30,33 @@ export function toFighter(character: Character): Fighter {
     healsLeft: HEALS_PER_FIGHTER,
     defeated: false,
   };
+}
+
+// Equipo del sistema: un enemigo por cada personaje del jugador y del mismo nivel.
+// Los enemigos usan el valor mínimo de cada estadística de su clase para que se les pueda ganar.
+export function createSystemTeam(playerTeam: Team, gameId: number): Team {
+  const fighters = playerTeam.fighters.map((playerFighter, index) => {
+    const enemy = ENEMIES[(gameId + index) % ENEMIES.length];
+    const stat = (name: "health" | "attack" | "defense" | "speed") => statRange(enemy.class, name, playerFighter.level).min;
+
+    return {
+      characterId: null,
+      name: enemy.name,
+      class: enemy.class,
+      level: playerFighter.level,
+      maxHealth: stat("health"),
+      health: stat("health"),
+      attack: stat("attack"),
+      defense: stat("defense"),
+      speed: stat("speed"),
+      defending: false,
+      specialCooldown: 0,
+      healsLeft: HEALS_PER_FIGHTER,
+      defeated: false,
+    };
+  });
+
+  return { playerId: null, playerName: SYSTEM_NAME, fighters };
 }
 
 // El personaje que está peleando: el primero del equipo que no ha sido derrotado.
@@ -71,6 +100,9 @@ export function startGame(game: Game): void {
   } else {
     addEvent(game, `La partida comenzó. Empieza ${first.playerName} porque su personaje es más rápido (${speeds}).`);
   }
+
+  // Si el sistema es más rápido, juega su primer turno de una vez.
+  playSystemTurn(game);
 }
 
 // ---------- Fin de la partida ----------
@@ -222,5 +254,30 @@ export function playTurn(game: Game, playerId: number, action: ActionName): Hist
   const start = game.history.length;
   executeAction(game, side, action);
 
+  // Contra el sistema, el servidor responde en la misma petición con la acción del enemigo.
+  playSystemTurn(game);
+
   return game.history.slice(start);
+}
+
+// ---------- Enemigos del sistema ----------
+
+// Decisión simple: se cura si le queda poca vida, usa la habilidad si está lista y si no ataca.
+export function chooseSystemAction(fighter: Fighter): ActionName {
+  if (fighter.health <= fighter.maxHealth * 0.35 && fighter.healsLeft > 0) {
+    return "curar";
+  }
+
+  if (fighter.specialCooldown === 0) {
+    return "habilidad";
+  }
+
+  return "atacar";
+}
+
+export function playSystemTurn(game: Game): void {
+  if (game.mode === "sistema" && game.status === "En curso" && game.turnOf === "opponent") {
+    const fighter = activeFighter(game.opponent as Team) as Fighter;
+    executeAction(game, "opponent", chooseSystemAction(fighter));
+  }
 }

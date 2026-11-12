@@ -1,6 +1,6 @@
 import type { Character, Game, GameMode, GameStatus, Player, Team } from "../types.js";
 import * as charactersService from "./characters.service.js";
-import { activeFighter, addEvent, getTeam, startGame, toFighter } from "./combat.service.js";
+import { activeFighter, addEvent, createSystemTeam, getTeam, startGame, toFighter } from "./combat.service.js";
 import { HttpError } from "../utils/httpError.js";
 
 // Las partidas viven en la memoria del servidor.
@@ -98,6 +98,13 @@ export function create(creator: Player, characters: Character[], mode: GameMode,
   };
 
   addEvent(game, `${creator.name} creó la partida con ${namesOf(game.creator)}.`);
+
+  // Contra el sistema no hay que esperar a nadie: el servidor arma el equipo rival y empieza.
+  if (mode === "sistema") {
+    game.opponent = createSystemTeam(game.creator, game.id);
+    addEvent(game, `El sistema eligió a ${namesOf(game.opponent)}.`);
+    startGame(game);
+  }
 
   games = [...games, game];
   return game;
